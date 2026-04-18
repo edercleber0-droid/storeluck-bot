@@ -1,0 +1,9 @@
+{
+  "name": "storeluck-bot",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "node-fetch": "^2.6.7"
+  }
+}
