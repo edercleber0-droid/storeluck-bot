@@ -12,7 +12,6 @@ app.listen(PORT, "0.0.0.0", () => {
 
 const { Client, GatewayIntentBits } = require("discord.js");
 
-// 🔥 node-fetch v3 usa import, então melhor usar fetch nativo do Node 18+
 const fetch = global.fetch;
 
 const client = new Client({
@@ -24,6 +23,11 @@ const client = new Client({
 });
 
 const TOKEN = process.env.TOKEN;
+
+if (!TOKEN) {
+  console.error("TOKEN não definido no Render");
+  process.exit(1);
+}
 
 client.on("ready", () => {
   console.log(`Bot online como ${client.user.tag}`);
@@ -41,13 +45,15 @@ client.on("messageCreate", async (message) => {
 
     try {
       const res = await fetch(`https://storeluck-api.onrender.com/create?tipo=${tipo}`);
-      
-      if (!res.ok) throw new Error("API error");
+
+      if (!res.ok) {
+        return message.reply("Erro na API");
+      }
 
       const data = await res.json();
 
       if (!data.key) {
-        return message.reply("Erro: key não encontrada");
+        return message.reply("Key não encontrada");
       }
 
       message.reply(`🔑 Sua key: ${data.key}`);
