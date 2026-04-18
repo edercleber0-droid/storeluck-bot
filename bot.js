@@ -1,5 +1,19 @@
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Bot online");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Servidor rodando na porta " + PORT);
+});
+
 const { Client, GatewayIntentBits } = require("discord.js");
-const fetch = require("node-fetch");
+
+// 🔥 node-fetch v3 usa import, então melhor usar fetch nativo do Node 18+
+const fetch = global.fetch;
 
 const client = new Client({
   intents: [
@@ -26,11 +40,19 @@ client.on("messageCreate", async (message) => {
     }
 
     try {
-      const res = await fetch("https://storeluck-api.onrender.com/create?tipo=" + tipo);
+      const res = await fetch(`https://storeluck-api.onrender.com/create?tipo=${tipo}`);
+      
+      if (!res.ok) throw new Error("API error");
+
       const data = await res.json();
 
-      message.reply("🔑 Sua key: " + data.key);
+      if (!data.key) {
+        return message.reply("Erro: key não encontrada");
+      }
+
+      message.reply(`🔑 Sua key: ${data.key}`);
     } catch (err) {
+      console.log(err);
       message.reply("Erro ao gerar key");
     }
   }
