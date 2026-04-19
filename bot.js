@@ -1,11 +1,13 @@
 const express = require("express");
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
 
-// 🌐 ANTI-SONO (Render free)
+// 🌐 ANTI-SONO (Render)
 const app = express();
+
 app.get("/", (req, res) => {
   res.send("Bot ativo");
 });
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("🌐 Anti-sleep ativo");
 });
@@ -20,6 +22,13 @@ const client = new Client({
   ],
   partials: [Partials.Channel]
 });
+
+// 💰 PREÇOS
+const prices = {
+  "1d": "R$5",
+  "3d": "R$10",
+  "perm": "R$20"
+};
 
 // 🔑 GERADOR DE KEY
 function generateKey(type) {
@@ -40,16 +49,27 @@ client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
 
   const text = msg.content.toLowerCase().trim();
-  console.log("MSG:", text); // debug
 
   // 🛒 comprar
-  if (text === "comprar 1d" || text === "comprar 3d" || text === "comprar perm") {
+  if (text.startsWith("comprar")) {
     const type = text.split(" ")[1];
+
+    if (!["1d", "3d", "perm"].includes(type)) {
+      return msg.reply("❌ Use: comprar 1d / 3d / perm");
+    }
+
+    if (pending.has(msg.author.id)) {
+      return msg.reply("⚠️ Você já tem um pedido ativo.");
+    }
+
     pending.set(msg.author.id, type);
-    return msg.reply("📩 Pedido iniciado! Agora envie o comprovante.");
+
+    return msg.reply(
+      `📩 Pedido iniciado!\n\n💰 Plano: ${type}\n💵 Valor: ${prices[type]}\n\n🔑 Pix: 87981682220\n\n📎 Envie o comprovante após o pagamento.`
+    );
   }
 
-  // 📎 comprovante (imagem)
+  // 📎 comprovante
   if (msg.attachments.size > 0) {
     const type = pending.get(msg.author.id);
 
@@ -58,10 +78,10 @@ client.on("messageCreate", async (msg) => {
     const admin = await client.users.fetch(ADMIN_ID);
 
     await admin.send(
-      `💰 PAGAMENTO\nUser: ${msg.author.tag}\nID: ${msg.author.id}\nPlano: ${type}\n\nUse: !confirm ${msg.author.id}`
+      `💰 PAGAMENTO\nUser: ${msg.author.tag}\nID: ${msg.author.id}\nPlano: ${type}\n\nConfirme com: !confirm ${msg.author.id}`
     );
 
-    return msg.reply("📩 Comprovante enviado!");
+    return msg.reply("📩 Comprovante enviado para análise!");
   }
 
   // ✔ confirmar
@@ -77,14 +97,15 @@ client.on("messageCreate", async (msg) => {
     await user.send(`🔑 Sua key: ${key}`);
 
     pending.delete(userId);
+
     return msg.reply("✔ Key enviada!");
   }
 });
 
-// 🚀 online
+// 🚀 ONLINE
 client.on("ready", () => {
   console.log("🤖 Bot online");
 });
 
-// 🔐 token
+// 🔐 TOKEN
 client.login(process.env.DISCORD_TOKEN);
