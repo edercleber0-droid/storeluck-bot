@@ -3,14 +3,8 @@ const { Client, GatewayIntentBits, Partials } = require("discord.js");
 
 // 🌐 ANTI-SONO (Render)
 const app = express();
-
-app.get("/", (req, res) => {
-  res.send("Bot ativo");
-});
-
-app.listen(process.env.PORT || 3000, () => {
-  console.log("🌐 Anti-sleep ativo");
-});
+app.get("/", (req, res) => res.send("Bot ativo"));
+app.listen(process.env.PORT || 3000);
 
 // 🤖 BOT
 const client = new Client({
@@ -72,8 +66,7 @@ client.on("messageCreate", async (msg) => {
   // 📎 comprovante
   if (msg.attachments.size > 0) {
     const type = pending.get(msg.author.id);
-
-    if (!type) return msg.reply("⚠️ Nenhuma compra ativa.");
+    if (!type) return;
 
     const admin = await client.users.fetch(ADMIN_ID);
 
@@ -81,10 +74,12 @@ client.on("messageCreate", async (msg) => {
       `💰 PAGAMENTO\nUser: ${msg.author.tag}\nID: ${msg.author.id}\nPlano: ${type}\n\nConfirme com: !confirm ${msg.author.id}`
     );
 
+    pending.delete(msg.author.id);
+
     return msg.reply("📩 Comprovante enviado para análise!");
   }
 
-  // ✔ confirmar
+  // ✔ confirmar (admin)
   if (text.startsWith("!confirm")) {
     const userId = text.split(" ")[1];
     const type = pending.get(userId);
@@ -94,11 +89,14 @@ client.on("messageCreate", async (msg) => {
     const key = generateKey(type);
     const user = await client.users.fetch(userId);
 
-    await user.send(`🔑 Sua key: ${key}`);
+    try {
+      await user.send(`🔑 Sua key: ${key}`);
+      msg.reply("✔ Key enviada no privado!");
+    } catch {
+      msg.reply("⚠️ Não consegui enviar no PV. O usuário precisa ativar mensagens privadas.");
+    }
 
     pending.delete(userId);
-
-    return msg.reply("✔ Key enviada!");
   }
 });
 
