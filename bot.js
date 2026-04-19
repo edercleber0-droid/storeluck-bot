@@ -60,7 +60,7 @@ client.on("messageCreate", async (msg) => {
       pending.set(msg.author.id, type);
 
       return msg.reply(
-        `📩 Pedido iniciado!\n\n💰 Plano: ${type}\n💵 Valor: ${prices[type]}\n\n🔑 Pix: 87981682220\n\n📎 Envie o comprovante após o pagamento.`
+        `📩 Pedido iniciado!\n\n💰 Plano: ${type}\n💵 Valor: ${prices[type]}\n\n🔑 Pix: 87981682220\n\n📎 Envie o comprovante após o pagamento.\n\n📌 IMPORTANTE: Ative o PV para receber sua key!`
       );
     }
 
@@ -90,9 +90,13 @@ client.on("messageCreate", async (msg) => {
 
       try {
         await user.send(`🔑 Sua key: ${key}`);
+
         msg.reply("✔ Key enviada no privado!");
+
       } catch {
-        msg.reply("⚠️ Não consegui enviar no PV. Ative mensagens diretas no servidor.");
+        msg.reply(
+          "⚠️ Não consegui enviar a key no PV.\n\n👉 Vá nas configurações do servidor e ative 'Permitir mensagens diretas', depois compre novamente."
+        );
       }
 
       pending.delete(userId);
