@@ -1,5 +1,18 @@
+const express = require("express");
 const { Client, GatewayIntentBits } = require("discord.js");
 
+// 🌐 PORTA FAKE (resolve warning do Render)
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Bot running");
+});
+
+app.listen(process.env.PORT || 3000, () => {
+  console.log("🌐 Keep-alive ativo");
+});
+
+// 🤖 BOT DISCORD
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -10,7 +23,7 @@ const client = new Client({
   partials: ["CHANNEL"]
 });
 
-// 🔑 gerar key
+// 🔑 key generator
 function generateKey(type) {
   const base = "STORE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -21,10 +34,9 @@ function generateKey(type) {
   return base;
 }
 
-// 📦 pedidos pendentes
 const pending = new Map();
 
-// 👇 SEU ID (CORRETO)
+// 👇 SEU ID
 const ADMIN_ID = "1495470321518514216";
 
 client.on("messageCreate", async (msg) => {
@@ -32,53 +44,47 @@ client.on("messageCreate", async (msg) => {
 
   const text = msg.content.toLowerCase();
 
-  // 🛒 compra
+  // compra
   if (text.startsWith("comprar")) {
-    const type = text.split(" ")[1]; // 1d / 3d / perm
+    const type = text.split(" ")[1];
 
     pending.set(msg.author.id, type);
 
-    msg.channel.send("📩 Pedido recebido! Envie o Pix e o comprovante.");
+    msg.channel.send("📩 Pedido recebido! Envie o Pix e comprovante.");
   }
 
-  // 📎 comprovante
+  // comprovante
   if (msg.attachments.size > 0) {
     const type = pending.get(msg.author.id);
 
-    if (!type) {
-      msg.channel.send("⚠️ Nenhuma compra ativa.");
-      return;
-    }
+    if (!type) return msg.channel.send("⚠️ Nenhuma compra ativa.");
 
     const admin = await client.users.fetch(ADMIN_ID);
 
     admin.send(
-      `💰 NOVO PAGAMENTO\nUsuário: ${msg.author.tag}\nID: ${msg.author.id}\nTipo: ${type}\n\nConfirme com: !confirm ${msg.author.id}`
+      `💰 NOVO PAGAMENTO\nUsuário: ${msg.author.tag}\nTipo: ${type}\nConfirme: !confirm ${msg.author.id}`
     );
 
-    msg.channel.send("📩 Comprovante enviado para verificação!");
+    msg.channel.send("📩 Enviado para verificação!");
   }
 
-  // ✔ confirmação
+  // confirmação
   if (text.startsWith("!confirm")) {
     const userId = text.split(" ")[1];
 
     const type = pending.get(userId);
 
-    if (!type) {
-      msg.reply("❌ Nenhum pagamento encontrado.");
-      return;
-    }
+    if (!type) return msg.reply("❌ Nenhum pagamento.");
 
     const key = generateKey(type);
 
     const user = await client.users.fetch(userId);
 
-    user.send(`✔ Pagamento aprovado!\n🔑 Sua KEY: ${key}`);
+    user.send(`✔ Aprovado!\n🔑 KEY: ${key}`);
 
     pending.delete(userId);
 
-    msg.reply("✔ Key enviada com sucesso!");
+    msg.reply("✔ Enviado!");
   }
 });
 
@@ -86,5 +92,5 @@ client.on("ready", () => {
   console.log("🤖 Bot online");
 });
 
-// 🔐 TOKEN do Render
+// 🔐 TOKEN
 client.login(process.env.DISCORD_TOKEN);
