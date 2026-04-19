@@ -1,12 +1,29 @@
 const express = require("express");
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
+const fs = require("fs");
 
-// 🌐 ANTI-SONO
 const app = express();
-app.get("/", (req, res) => res.send("Bot ativo"));
-app.listen(process.env.PORT || 3000);
+app.get("/", (req, res) => res.send("API online"));
 
-// 🤖 CLIENT
+app.listen(process.env.PORT || 3000, () => {
+  console.log("🌐 API online");
+});
+
+// =====================
+// CONFIG
+// =====================
+const ADMIN_ID = "1494847279985852499";
+const PIX = "87981682220";
+
+const prices = {
+  "1d": "R$5",
+  "3d": "R$10",
+  "perm": "R$20"
+};
+
+// =====================
+// BOT
+// =====================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -17,100 +34,108 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-// 💰 PREÇOS
-const prices = {
-  "1d": "R$5",
-  "3d": "R$10",
-  "perm": "R$20"
-};
+// pedidos em memória
+const pending = new Map();
 
-// 🔑 GERAR KEY
+// =====================
+// FUNÇÃO KEY
+// =====================
 function generateKey(type) {
   const base = "STORE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-  if (type === "1d") return base + "-1D";
-  if (type === "3d") return base + "-3D";
-  if (type === "perm") return base + "-PERM";
+
+  if (type === "1d") return { key: base + "-1D", expires: Date.now() + 24 * 60 * 60 * 1000 };
+  if (type === "3d") return { key: base + "-3D", expires: Date.now() + 3 * 24 * 60 * 60 * 1000 };
+  return { key: base + "-PERM", expires: null };
 }
 
-// 🗂 PEDIDOS
-const pending = new Map();
-const ADMIN_ID = "1494847279985852499";
+// =====================
+// SALVAR KEY
+// =====================
+function saveKey(data) {
+  let keys = [];
 
-// 🛡️ ANTI DUPLICAÇÃO
-client.removeAllListeners("messageCreate");
+  if (fs.existsSync("keys.json")) {
+    keys = JSON.parse(fs.readFileSync("keys.json"));
+  }
 
+  keys.push(data);
+  fs.writeFileSync("keys.json", JSON.stringify(keys, null, 2));
+}
+
+// =====================
+// COMANDOS
+// =====================
 client.on("messageCreate", async (msg) => {
-  try {
-    if (msg.author.bot) return;
+  if (msg.author.bot) return;
 
-    const text = msg.content.toLowerCase().trim();
+  const text = msg.content.toLowerCase();
 
-    // 🛒 COMPRA
-    if (text.startsWith("comprar")) {
-      const type = text.split(" ")[1];
+  // 🛒 COMPRA
+  if (text.startsWith("comprar")) {
+    const type = text.split(" ")[1];
 
-      if (!["1d", "3d", "perm"].includes(type)) {
-        return msg.reply("❌ Use: comprar 1d / 3d / perm");
-      }
-
-      if (pending.has(msg.author.id)) {
-        return msg.reply("⚠️ Você já tem um pedido ativo.");
-      }
-
-      pending.set(msg.author.id, type);
-
-      return msg.reply(
-        `📩 Pedido iniciado!\n\n💰 Plano: ${type}\n💵 Valor: ${prices[type]}\n\n🔑 Pix: 87981682220\n\n📎 Envie o comprovante após o pagamento.\n\n📌 IMPORTANTE: Ative o PV para receber sua key!`
-      );
+    if (!prices[type]) {
+      return msg.reply("❌ Use: comprar 1d / 3d / perm");
     }
 
-    // 📎 COMPROVANTE
-    if (msg.attachments.size > 0) {
-      const type = pending.get(msg.author.id);
-      if (!type) return;
+    pending.set(msg.author.id, type);
 
-      const admin = await client.users.fetch(ADMIN_ID);
+    return msg.reply(
+      `📩 Pedido iniciado!\n\n💰 Plano: ${type}\n💵 Valor: ${prices[type]}\n\n🔑 PIX: ${PIX}\n\n📎 Envie o comprovante aqui.`
+    );
+  }
 
-      await admin.send(
-        `💰 PAGAMENTO\nUser: ${msg.author.tag}\nID: ${msg.author.id}\nPlano: ${type}\n\nConfirme com: !confirm ${msg.author.id}`
-      );
+  // 📎 COMPROVANTE
+  if (msg.attachments.size > 0) {
+    const type = pending.get(msg.author.id);
+    if (!type) return;
 
-      return msg.reply("📩 Comprovante enviado para análise!");
+    const admin = await client.users.fetch(ADMIN_ID);
+
+    await admin.send(
+      `💰 NOVO PAGAMENTO\n\nUser: ${msg.author.tag}\nID: ${msg.author.id}\nPlano: ${type}\n\nResponda:\n✔ ${msg.author.id}\n❌ ${msg.author.id}`
+    );
+
+    return msg.reply("📩 Comprovante enviado para análise.");
+  }
+
+  // ✔ APROVAR
+  if (text.startsWith("✔")) {
+    const userId = text.split(" ")[1];
+    const type = pending.get(userId);
+
+    if (!type) return msg.reply("❌ Pedido não encontrado.");
+
+    const data = generateKey(type);
+    saveKey(data);
+
+    const user = await client.users.fetch(userId);
+
+    try {
+      await user.send(`🔑 Sua key: ${data.key}`);
+      msg.reply("✔ Key enviada com sucesso!");
+    } catch {
+      msg.reply("⚠️ Ative o privado para receber a key.");
     }
 
-    // ✔ CONFIRMAR
-    if (text.startsWith("!confirm")) {
-      const userId = text.split(" ")[1];
-      const type = pending.get(userId);
+    pending.delete(userId);
+  }
 
-      if (!type) return msg.reply("❌ Nenhum pedido.");
+  // ❌ NEGAR
+  if (text.startsWith("❌")) {
+    const userId = text.split(" ")[1];
 
-      const key = generateKey(type);
-      const user = await client.users.fetch(userId);
+    pending.delete(userId);
 
-      try {
-        await user.send(`🔑 Sua key: ${key}`);
-
-        msg.reply("✔ Key enviada no privado!");
-
-      } catch {
-        msg.reply(
-          "⚠️ Não consegui enviar a key no PV.\n\n👉 Vá nas configurações do servidor e ative 'Permitir mensagens diretas', depois compre novamente."
-        );
-      }
-
-      pending.delete(userId);
-    }
-
-  } catch (err) {
-    console.log("ERRO:", err);
+    msg.reply("❌ Pedido negado.");
   }
 });
 
-// 🚀 ONLINE
+// =====================
+// ONLINE
+// =====================
 client.on("ready", () => {
   console.log("🤖 Bot online");
 });
 
-// 🔐 LOGIN
 client.login(process.env.DISCORD_TOKEN);
