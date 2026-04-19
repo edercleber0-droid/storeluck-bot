@@ -49,6 +49,6 @@ client.on("messageCreate", (msg) => {
   }
 });
 
-// 🔐 login seguro (NUNCA deixa vazio)
-client.login("SEU_TOKEN_AQUI")
+// 🔐 TOKEN AGORA VEM DO RENDER (NÃO DO CÓDIGO)
+client.login(process.env.DISCORD_TOKEN)
   .catch(err => console.log("❌ Token error:", err));
