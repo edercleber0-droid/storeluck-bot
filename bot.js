@@ -1,5 +1,18 @@
+const express = require("express");
 const { Client, GatewayIntentBits } = require("discord.js");
 
+// 🌐 KEEP ALIVE (resolve timeout no Render)
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Bot running");
+});
+
+app.listen(process.env.PORT || 3000, () => {
+  console.log("🌐 Keep-alive server on");
+});
+
+// 🤖 DISCORD BOT
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -49,6 +62,6 @@ client.on("messageCreate", (msg) => {
   }
 });
 
-// 🔐 TOKEN AGORA VEM DO RENDER (NÃO DO CÓDIGO)
+// 🔐 TOKEN vindo do Render (NÃO DO CÓDIGO)
 client.login(process.env.DISCORD_TOKEN)
   .catch(err => console.log("❌ Token error:", err));
