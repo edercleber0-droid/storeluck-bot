@@ -22,7 +22,7 @@ const prices = {
 
 const pending = new Map();
 
-// gerar key
+// 🔑 gerar key
 function generateKey(type) {
   const base = "STORE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -31,7 +31,7 @@ function generateKey(type) {
   return { key: base + "-PERM", expires: null };
 }
 
-// salvar key
+// 💾 salvar key
 function saveKey(data) {
   let keys = [];
 
@@ -48,7 +48,7 @@ client.on("messageCreate", async (msg) => {
 
   const text = msg.content.toLowerCase();
 
-  // COMPRA
+  // 🛒 comprar
   if (text.startsWith("comprar")) {
     const type = text.split(" ")[1];
 
@@ -61,7 +61,7 @@ client.on("messageCreate", async (msg) => {
     );
   }
 
-  // comprovante
+  // 📎 comprovante
   if (msg.attachments.size > 0) {
     const type = pending.get(msg.author.id);
     if (!type) return;
@@ -75,7 +75,7 @@ client.on("messageCreate", async (msg) => {
     return msg.reply("Comprovante enviado.");
   }
 
-  // APROVAR
+  // ✔ aprovar
   if (text.startsWith("✔")) {
     const userId = text.split(" ")[1];
     const type = pending.get(userId);
@@ -92,10 +92,9 @@ client.on("messageCreate", async (msg) => {
     pending.delete(userId);
   }
 
-  // NEGAR
+  // ❌ negar
   if (text.startsWith("❌")) {
     const userId = text.split(" ")[1];
-
     pending.delete(userId);
   }
 });
