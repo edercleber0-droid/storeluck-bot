@@ -3,17 +3,28 @@ const { Client, GatewayIntentBits, Partials } = require("discord.js");
 const fs = require("fs");
 
 // =====================
-// 🌐 PORTA FAKE (RENDER)
+// 🌐 LIVE / RENDER PORTA
 // =====================
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("🤖 StoreLuck Bot Online");
+  res.send("🤖 STORELUCK BOT ONLINE - LIVE ✔");
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌐 Server rodando na porta", PORT);
+  console.log("🌐 Porta ativa:", PORT);
+});
+
+// =====================
+// 🛡️ ANTI CRASH
+// =====================
+process.on("uncaughtException", (err) => {
+  console.log("ERRO:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.log("PROMISE ERRO:", err);
 });
 
 // =====================
@@ -41,7 +52,7 @@ const prices = {
 const pending = new Map();
 
 // =====================
-// 🔑 GERAR KEY
+// 🔑 KEY
 // =====================
 function generateKey(type) {
   const base = "STORE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -77,14 +88,12 @@ client.on("messageCreate", async (msg) => {
   if (text.startsWith("comprar")) {
     const type = text.split(" ")[1];
 
-    if (!prices[type]) {
-      return msg.reply("Use: comprar 1d / 3d / perm");
-    }
+    if (!prices[type]) return msg.reply("Use: comprar 1d / 3d / perm");
 
     pending.set(msg.author.id, type);
 
     return msg.reply(
-      `💰 Plano: ${type}\n💵 ${prices[type]}\nPIX: ${PIX}\n\n📎 Envie o comprovante aqui.`
+      `💰 Plano: ${type}\n💵 ${prices[type]}\nPIX: ${PIX}\n\nEnvie o comprovante.`
     );
   }
 
@@ -96,10 +105,10 @@ client.on("messageCreate", async (msg) => {
     const admin = await client.users.fetch(ADMIN_ID);
 
     await admin.send(
-      `💰 NOVO PAGAMENTO\n\nUser: ${msg.author.id}\nPlano: ${type}\n\nResponda ✔ ID ou ❌ ID`
+      `💰 PAGAMENTO\nUser: ${msg.author.id}\nPlano: ${type}\n\nResponda ✔ ID ou ❌ ID`
     );
 
-    return msg.reply("📩 Comprovante enviado para análise.");
+    return msg.reply("📩 Comprovante enviado.");
   }
 
   // ✔ APROVAR
@@ -128,13 +137,6 @@ client.on("messageCreate", async (msg) => {
     const userId = text.split(" ")[1];
     pending.delete(userId);
   }
-});
-
-// =====================
-// 🤖 ONLINE
-// =====================
-client.on("ready", () => {
-  console.log("🤖 Bot online");
 });
 
 client.login(process.env.DISCORD_TOKEN);
