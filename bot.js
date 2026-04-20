@@ -1,6 +1,24 @@
+const express = require("express");
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
 const fs = require("fs");
 
+// =====================
+// 🌐 PORTA FAKE (RENDER)
+// =====================
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("🤖 StoreLuck Bot Online");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🌐 Server rodando na porta", PORT);
+});
+
+// =====================
+// 🤖 DISCORD BOT
+// =====================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -22,7 +40,9 @@ const prices = {
 
 const pending = new Map();
 
-// 🔑 gerar key
+// =====================
+// 🔑 GERAR KEY
+// =====================
 function generateKey(type) {
   const base = "STORE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -31,7 +51,9 @@ function generateKey(type) {
   return { key: base + "-PERM", expires: null };
 }
 
-// 💾 salvar key
+// =====================
+// 💾 SALVAR KEY
+// =====================
 function saveKey(data) {
   let keys = [];
 
@@ -43,25 +65,30 @@ function saveKey(data) {
   fs.writeFileSync("keys.json", JSON.stringify(keys, null, 2));
 }
 
+// =====================
+// 💬 COMANDOS
+// =====================
 client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
 
   const text = msg.content.toLowerCase();
 
-  // 🛒 comprar
+  // 🛒 COMPRA
   if (text.startsWith("comprar")) {
     const type = text.split(" ")[1];
 
-    if (!prices[type]) return msg.reply("Use: comprar 1d / 3d / perm");
+    if (!prices[type]) {
+      return msg.reply("Use: comprar 1d / 3d / perm");
+    }
 
     pending.set(msg.author.id, type);
 
     return msg.reply(
-      `💰 Plano: ${type}\n💵 ${prices[type]}\nPIX: ${PIX}\n\nEnvie o comprovante.`
+      `💰 Plano: ${type}\n💵 ${prices[type]}\nPIX: ${PIX}\n\n📎 Envie o comprovante aqui.`
     );
   }
 
-  // 📎 comprovante
+  // 📎 COMPROVANTE
   if (msg.attachments.size > 0) {
     const type = pending.get(msg.author.id);
     if (!type) return;
@@ -69,13 +96,13 @@ client.on("messageCreate", async (msg) => {
     const admin = await client.users.fetch(ADMIN_ID);
 
     await admin.send(
-      `💰 PAGAMENTO\nUser: ${msg.author.id}\nPlano: ${type}\n\nResponda ✔ ID ou ❌ ID`
+      `💰 NOVO PAGAMENTO\n\nUser: ${msg.author.id}\nPlano: ${type}\n\nResponda ✔ ID ou ❌ ID`
     );
 
-    return msg.reply("Comprovante enviado.");
+    return msg.reply("📩 Comprovante enviado para análise.");
   }
 
-  // ✔ aprovar
+  // ✔ APROVAR
   if (text.startsWith("✔")) {
     const userId = text.split(" ")[1];
     const type = pending.get(userId);
@@ -87,16 +114,27 @@ client.on("messageCreate", async (msg) => {
 
     const user = await client.users.fetch(userId);
 
-    await user.send(`🔑 KEY: ${data.key}`);
+    try {
+      await user.send(`🔑 SUA KEY: ${data.key}`);
+    } catch {
+      msg.reply("⚠️ Não consegui enviar no PV.");
+    }
 
     pending.delete(userId);
   }
 
-  // ❌ negar
+  // ❌ NEGAR
   if (text.startsWith("❌")) {
     const userId = text.split(" ")[1];
     pending.delete(userId);
   }
+});
+
+// =====================
+// 🤖 ONLINE
+// =====================
+client.on("ready", () => {
+  console.log("🤖 Bot online");
 });
 
 client.login(process.env.DISCORD_TOKEN);
